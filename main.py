@@ -1,6 +1,5 @@
 import flet as ft
 
-
 # === 1. 核心逻辑类 (算法升级) ===
 class StockCalculator:
     def __init__(self):
@@ -24,9 +23,9 @@ class StockCalculator:
         transfer = amt * self.rates['transfer']
         tax = amt * self.rates['tax'] if op == 'sell' else 0
         total_fee = comm + transfer + tax
-
+        
         trade = {
-            "id": len(self.transactions) + 1,
+            "id": len(self.transactions) + 1, 
             "code": code, "name": name, "op": op,
             "p": price, "q": qty, "amt": amt,
             "comm": comm, "transfer": transfer, "tax": tax,
@@ -46,10 +45,10 @@ class StockCalculator:
         # 1. 用于计算“摊薄总成本”（做T视角：总进 - 总出）
         diluted_cost_pool = 0.0
         total_qty = 0
-
+        
         # 2. 用于计算“已实现盈亏”（会计视角：卖出价 - 买入均价）
         realized_pl_accumulator = 0.0
-
+        
         # 临时字典，用于追踪每只股票的“物理持仓均价”（非摊薄）
         # 格式：{code: {'qty': 0, 'total_cost': 0.0}}
         avg_cost_tracker = {}
@@ -58,46 +57,46 @@ class StockCalculator:
             code = t['code']
             if code not in avg_cost_tracker:
                 avg_cost_tracker[code] = {'qty': 0, 'total_cost': 0.0}
-
+            
             tracker = avg_cost_tracker[code]
-
+            
             if t['op'] == 'buy':
                 # --- A. 摊薄逻辑 ---
                 real_cost = (t['p'] * t['q']) + t['fee']
                 diluted_cost_pool += real_cost
                 total_qty += t['q']
-
+                
                 # --- B. 均价追踪逻辑 (为了算盈亏) ---
                 tracker['total_cost'] += real_cost
                 tracker['qty'] += t['q']
-
+                
                 # 更新流水描述
                 cur_diluted_avg = diluted_cost_pool / total_qty if total_qty > 0 else 0
                 t['desc'] = f"加仓:成本{cur_diluted_avg:.3f}"
 
-            else:  # Sell
+            else: # Sell
                 # --- A. 摊薄逻辑 ---
                 net_income = (t['p'] * t['q']) - t['fee']
                 diluted_cost_pool -= net_income
                 total_qty -= t['q']
-
+                
                 # --- B. 均价追踪逻辑 (核心：立即结算盈亏) ---
                 # 计算卖出前的持仓均价
                 current_avg_price = 0.0
                 if tracker['qty'] > 0:
                     current_avg_price = tracker['total_cost'] / tracker['qty']
-
+                
                 # 计算这笔卖出的成本（按均价算）
                 cost_of_sold_shares = current_avg_price * t['q']
-
+                
                 # 这笔交易的净利润 = 净收入 - 卖出份额的成本
                 trade_profit = net_income - cost_of_sold_shares
                 realized_pl_accumulator += trade_profit
-
+                
                 # 更新追踪器
                 tracker['qty'] -= t['q']
-                tracker['total_cost'] -= cost_of_sold_shares  # 移出已卖出的成本
-
+                tracker['total_cost'] -= cost_of_sold_shares # 移出已卖出的成本
+                
                 # 更新流水描述
                 if total_qty <= 0:
                     t['desc'] = f"清仓:盈亏{trade_profit:+.2f}"
@@ -110,20 +109,19 @@ class StockCalculator:
 
         return total_qty, diluted_cost_pool, realized_pl_accumulator
 
-
 # === 2. Flet UI (UI美化版 - 修复颜色报错) ===
 def main(page: ft.Page):
     # --- 页面设置 ---
     page.title = "做T助手 Pro"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 15
-    page.bgcolor = "#F0F2F5"
-    page.scroll = ft.ScrollMode.HIDDEN
-
+    page.padding = 15 
+    page.bgcolor = "#F0F2F5" 
+    page.scroll = ft.ScrollMode.HIDDEN 
+    
     # 模拟手机尺寸
     page.window_width = 393
     page.window_height = 852
-
+    
     calc = StockCalculator()
     selected_trades = []
 
@@ -159,11 +157,11 @@ def main(page: ft.Page):
             content=content,
             bgcolor="white",
             padding=padding,
-            border_radius=16,
+            border_radius=16, 
             shadow=ft.BoxShadow(
-                blur_radius=10,
-                spread_radius=1,
-                color="#14000000",
+                blur_radius=10, 
+                spread_radius=1, 
+                color="#14000000", 
                 offset=ft.Offset(0, 4)
             )
         )
@@ -186,7 +184,7 @@ def main(page: ft.Page):
                 ft.VerticalDivider(width=1, color="#ECF0F1"),
                 create_stat_col("摊薄成本(元)", txt_total_cost, "💰"),
             ]),
-            ft.Divider(height=20, color="#ECF0F1"),
+            ft.Divider(height=20, color="#ECF0F1"), 
             ft.Row([
                 create_stat_col("已实现盈亏(元)", txt_total_pl, "🧧"),
             ])
@@ -201,13 +199,13 @@ def main(page: ft.Page):
             height=50,
             content_padding=15,
             border_radius=10,
-            bgcolor="#F8F9FA",
-            border_color="transparent",
-            focused_border_color="#3498DB",
+            bgcolor="#F8F9FA", 
+            border_color="transparent", 
+            focused_border_color="#3498DB", 
             expand=expand,
             keyboard_type=kb_type
         )
-
+    
     tf_code = create_input("代码", "🔢", 1)
     tf_name = create_input("名称", "🏷️", 2)
     tf_price = create_input("价格", "💲", 1, "number")
@@ -224,14 +222,14 @@ def main(page: ft.Page):
             p = float(tf_price.value)
             q = int(tf_qty.value)
             calc.update_rates(tf_c.value, tf_m.value, tf_t.value, tf_tf.value)
-
+            
             last_t = calc.add_trade(tf_code.value, tf_name.value, op, p, q)
             save_data()
-
-            refresh_dashboard()
+            
+            refresh_dashboard() 
             refresh_table()
             show_details(last_t)
-
+            
             tf_price.value = ""
             tf_qty.value = ""
             page.update()
@@ -242,15 +240,15 @@ def main(page: ft.Page):
         shape=ft.RoundedRectangleBorder(radius=10),
         overlay_color="#1AFFFFFF"
     )
-
+    
     btn_buy = ft.ElevatedButton(
         content=ft.Row([ft.Text("📉 买入建仓/做T", size=15, weight="bold")], alignment="center"),
-        data="buy", on_click=on_trade_click,
+        data="buy", on_click=on_trade_click, 
         bgcolor="#E74C3C", color="white", height=48, expand=1, style=btn_style
     )
     btn_sell = ft.ElevatedButton(
         content=ft.Row([ft.Text("📈 卖出减仓/止盈", size=15, weight="bold")], alignment="center"),
-        data="sell", on_click=on_trade_click,
+        data="sell", on_click=on_trade_click, 
         bgcolor="#3498DB", color="white", height=48, expand=1, style=btn_style
     )
 
@@ -266,7 +264,7 @@ def main(page: ft.Page):
     # --- C. 设置区 (Settings) ---
     def create_mini_input(label, val):
         return ft.TextField(
-            label=label, value=val,
+            label=label, value=val, 
             width=85, text_size=12, height=40, content_padding=10,
             border_radius=8, bgcolor="#F8F9FA", border_color="transparent"
         )
@@ -307,8 +305,8 @@ def main(page: ft.Page):
         page.update()
 
     btn_delete_table = ft.ElevatedButton(
-        "🗑️ 删除选中",
-        visible=False,
+        "🗑️ 删除选中", 
+        visible=False, 
         on_click=on_delete_selected,
         bgcolor="#E74C3C", color="white", height=30,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6))
@@ -316,7 +314,7 @@ def main(page: ft.Page):
 
     data_table = ft.DataTable(
         show_checkbox_column=True,
-        heading_row_color="#EBF5FB",
+        heading_row_color="#EBF5FB", 
         heading_row_height=45,
         data_row_min_height=42,
         data_row_max_height=42,
@@ -337,12 +335,12 @@ def main(page: ft.Page):
             ft.Row([
                 ft.Text("📝 交易流水", weight="bold", size=16, color="#2C3E50"),
                 ft.Container(expand=True),
-                btn_delete_table
+                btn_delete_table 
             ], alignment="spaceBetween"),
             ft.Divider(height=10, color="transparent"),
             ft.Container(
                 ft.Column([data_table], scroll=ft.ScrollMode.ADAPTIVE, expand=True),
-                height=300
+                height=300 
             )
         ], spacing=0)
     )
@@ -354,31 +352,29 @@ def main(page: ft.Page):
             if t not in selected_trades: selected_trades.append(t)
         else:
             if t in selected_trades: selected_trades.remove(t)
-
+        
         btn_delete_table.visible = len(selected_trades) > 0
         btn_delete_table.text = f"🗑️ 删除({len(selected_trades)})"
-
-        if e.data == "true":
-            show_details(t)
-        else:
-            clear_details()
+        
+        if e.data == "true": show_details(t)
+        else: clear_details()
         page.update()
 
     def refresh_table():
         data_table.rows.clear()
         selected_trades.clear()
         btn_delete_table.visible = False
-
+        
         for t in reversed(calc.transactions):
             if t['op'] == 'buy':
-                color = "#E74C3C"  # 红
-                bg_color = "#FDEDEC"
+                color = "#E74C3C" # 红
+                bg_color = "#FDEDEC" 
                 op_txt = "买入"
             else:
-                color = "#3498DB"  # 蓝
-                bg_color = "#EBF5FB"
+                color = "#3498DB" # 蓝
+                bg_color = "#EBF5FB" 
                 op_txt = "卖出"
-
+            
             data_table.rows.append(
                 ft.DataRow(
                     selected=False,
@@ -386,7 +382,7 @@ def main(page: ft.Page):
                     data=t,
                     cells=[
                         ft.DataCell(ft.Text(t['code'], size=12, font_family="monospace")),
-                        ft.DataCell(ft.Text(t['name'], size=12)),
+                        ft.DataCell(ft.Text(t['name'], size=12)), 
                         ft.DataCell(
                             ft.Container(
                                 ft.Text(op_txt, color=color, weight="bold", size=11),
@@ -395,7 +391,7 @@ def main(page: ft.Page):
                         ),
                         ft.DataCell(ft.Text(f"{t['p']:.3f}", size=12, weight="bold")),
                         ft.DataCell(ft.Text(f"{t['q']}", size=12)),
-                        ft.DataCell(ft.Text(t.get('desc', ''), size=11, color="#7F8C8D")),
+                        ft.DataCell(ft.Text(t.get('desc',''), size=11, color="#7F8C8D")),
                     ],
                 )
             )
@@ -405,26 +401,23 @@ def main(page: ft.Page):
         q, c, pl = calc.get_portfolio_summary()
         txt_hold_qty.value = str(q)
         txt_total_cost.value = f"{c:,.2f}"
-
+        
         # 盈亏颜色逻辑
         if pl > 0:
             txt_total_pl.value = f"+{pl:,.2f}"
-            txt_total_pl.color = "#E74C3C"  # 盈红
+            txt_total_pl.color = "#E74C3C" # 盈红
         elif pl < 0:
             txt_total_pl.value = f"{pl:,.2f}"
-            txt_total_pl.color = "#27AE60"  # 亏绿 (A股逻辑)
+            txt_total_pl.color = "#27AE60" # 亏绿 (A股逻辑)
         else:
             txt_total_pl.value = "0.00"
             txt_total_pl.color = "#2C3E50"
         page.update()
 
     # --- E. 详情面板 (Details) ---
-    def mk_det(label):
-        return ft.Text(f"🔹 {label}", size=11, color="#95A5A6")
-
-    def mk_val():
-        return ft.Text("--", size=13, weight="bold", color="#2C3E50")
-
+    def mk_det(label): return ft.Text(f"🔹 {label}", size=11, color="#95A5A6")
+    def mk_val(): return ft.Text("--", size=13, weight="bold", color="#2C3E50")
+    
     det_amt = mk_val()
     det_comm = mk_val()
     det_tax = mk_val()
@@ -468,14 +461,13 @@ def main(page: ft.Page):
             detail_panel,
             ft.Container(height=30),
             ft.Text("Build with Flet & Python", size=10, color="#BDC3C7", text_align="center")
-        ],
-            scroll=ft.ScrollMode.ADAPTIVE,
-            expand=True,
-            horizontal_alignment=ft.CrossAxisAlignment.STRETCH
+        ], 
+        scroll=ft.ScrollMode.ADAPTIVE, 
+        expand=True,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH 
         )
     )
 
     load_data()
 
-
-ft.app(target=main)
+ft.app(target=main, assets_dir="assets")
