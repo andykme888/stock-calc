@@ -1,6 +1,6 @@
 import flet as ft
 
-# === 1. 核心逻辑类 (算法升级) ===
+# === 1. 核心逻辑类 (后端计算 - 保持不变) ===
 class StockCalculator:
     def __init__(self):
         self.transactions = []
@@ -40,17 +40,11 @@ class StockCalculator:
             if t in self.transactions:
                 self.transactions.remove(t)
 
-    # 【核心修改】双轨制计算：既算摊薄成本，也算实时盈亏
+    # 双轨制计算：既算摊薄成本，也算实时盈亏
     def get_portfolio_summary(self):
-        # 1. 用于计算“摊薄总成本”（做T视角：总进 - 总出）
         diluted_cost_pool = 0.0
         total_qty = 0
-        
-        # 2. 用于计算“已实现盈亏”（会计视角：卖出价 - 买入均价）
         realized_pl_accumulator = 0.0
-        
-        # 临时字典，用于追踪每只股票的“物理持仓均价”（非摊薄）
-        # 格式：{code: {'qty': 0, 'total_cost': 0.0}}
         avg_cost_tracker = {}
 
         for t in self.transactions:
@@ -61,46 +55,34 @@ class StockCalculator:
             tracker = avg_cost_tracker[code]
             
             if t['op'] == 'buy':
-                # --- A. 摊薄逻辑 ---
                 real_cost = (t['p'] * t['q']) + t['fee']
                 diluted_cost_pool += real_cost
                 total_qty += t['q']
                 
-                # --- B. 均价追踪逻辑 (为了算盈亏) ---
                 tracker['total_cost'] += real_cost
                 tracker['qty'] += t['q']
                 
-                # 更新流水描述
                 cur_diluted_avg = diluted_cost_pool / total_qty if total_qty > 0 else 0
                 t['desc'] = f"加仓:成本{cur_diluted_avg:.3f}"
 
-            else: # Sell
-                # --- A. 摊薄逻辑 ---
+            else: 
                 net_income = (t['p'] * t['q']) - t['fee']
                 diluted_cost_pool -= net_income
                 total_qty -= t['q']
                 
-                # --- B. 均价追踪逻辑 (核心：立即结算盈亏) ---
-                # 计算卖出前的持仓均价
                 current_avg_price = 0.0
                 if tracker['qty'] > 0:
                     current_avg_price = tracker['total_cost'] / tracker['qty']
                 
-                # 计算这笔卖出的成本（按均价算）
                 cost_of_sold_shares = current_avg_price * t['q']
-                
-                # 这笔交易的净利润 = 净收入 - 卖出份额的成本
                 trade_profit = net_income - cost_of_sold_shares
                 realized_pl_accumulator += trade_profit
                 
-                # 更新追踪器
                 tracker['qty'] -= t['q']
-                tracker['total_cost'] -= cost_of_sold_shares # 移出已卖出的成本
+                tracker['total_cost'] -= cost_of_sold_shares 
                 
-                # 更新流水描述
                 if total_qty <= 0:
                     t['desc'] = f"清仓:盈亏{trade_profit:+.2f}"
-                    # 清仓归零防止浮点误差
                     diluted_cost_pool = 0
                     total_qty = 0
                 else:
@@ -109,7 +91,7 @@ class StockCalculator:
 
         return total_qty, diluted_cost_pool, realized_pl_accumulator
 
-# === 2. Flet UI (UI美化版 - 修复颜色报错) ===
+# === 2. Flet UI (UI美化版 - 修复显示问题) ===
 def main(page: ft.Page):
     # --- 页面设置 ---
     page.title = "做T助手 Pro"
@@ -182,7 +164,7 @@ def main(page: ft.Page):
             ft.Row([
                 create_stat_col("持仓(股)", txt_hold_qty, "📦"),
                 ft.VerticalDivider(width=1, color="#ECF0F1"),
-                create_stat_col("摊薄成本(元)", txt_total_cost, "💰"),
+                create_stat_col("成本(元)", txt_total_cost, "💰"),
             ]),
             ft.Divider(height=20, color="#ECF0F1"), 
             ft.Row([
@@ -292,7 +274,7 @@ def main(page: ft.Page):
         text_color="#2C3E50"
     )
 
-    # --- D. 交易表格 (Table) ---
+    # --- D. 交易表格 (Table - 修复滚动问题) ---
     def on_delete_selected(e):
         if not selected_trades: return
         calc.delete_trades(selected_trades)
@@ -325,7 +307,7 @@ def main(page: ft.Page):
             ft.DataColumn(ft.Text("🕹️操作", size=12, weight="bold", color="#34495E")),
             ft.DataColumn(ft.Text("💲均价", size=12, weight="bold", color="#34495E"), numeric=True),
             ft.DataColumn(ft.Text("#️⃣数量", size=12, weight="bold", color="#34495E"), numeric=True),
-            ft.DataColumn(ft.Text("📈分析", size=12, weight="bold", color="#34495E")),
+            ft.DataColumn(ft.Text("📈分析", size=12, weight="bold", color="#34495E")), # 这里就是分析列
         ],
         rows=[],
     )
@@ -338,9 +320,21 @@ def main(page: ft.Page):
                 btn_delete_table 
             ], alignment="spaceBetween"),
             ft.Divider(height=10, color="transparent"),
+            
+            # 【关键修改】修复显示不全的问题
+            # 1. 外层 Column 允许垂直滚动 (scroll=ft.ScrollMode.AUTO)
+            # 2. 内层 Row 允许水平滚动 (scroll=ft.ScrollMode.ALWAYS)
             ft.Container(
-                ft.Column([data_table], scroll=ft.ScrollMode.ADAPTIVE, expand=True),
-                height=300 
+                content=ft.Column(
+                    [
+                        ft.Row(
+                            [data_table], 
+                            scroll=ft.ScrollMode.ALWAYS # 允许左右滑动！
+                        )
+                    ],
+                    scroll=ft.ScrollMode.AUTO, # 允许上下滑动
+                ),
+                height=300 # 限制高度
             )
         ], spacing=0)
     )
@@ -367,11 +361,11 @@ def main(page: ft.Page):
         
         for t in reversed(calc.transactions):
             if t['op'] == 'buy':
-                color = "#E74C3C" # 红
+                color = "#E74C3C" 
                 bg_color = "#FDEDEC" 
                 op_txt = "买入"
             else:
-                color = "#3498DB" # 蓝
+                color = "#3498DB" 
                 bg_color = "#EBF5FB" 
                 op_txt = "卖出"
             
@@ -402,13 +396,12 @@ def main(page: ft.Page):
         txt_hold_qty.value = str(q)
         txt_total_cost.value = f"{c:,.2f}"
         
-        # 盈亏颜色逻辑
         if pl > 0:
             txt_total_pl.value = f"+{pl:,.2f}"
-            txt_total_pl.color = "#E74C3C" # 盈红
+            txt_total_pl.color = "#E74C3C" 
         elif pl < 0:
             txt_total_pl.value = f"{pl:,.2f}"
-            txt_total_pl.color = "#27AE60" # 亏绿 (A股逻辑)
+            txt_total_pl.color = "#27AE60" 
         else:
             txt_total_pl.value = "0.00"
             txt_total_pl.color = "#2C3E50"
@@ -468,6 +461,8 @@ def main(page: ft.Page):
         )
     )
 
+    # 指定 assets 目录，防止图标不显示
+    # 注意：确保你的 icon.png 已经在 GitHub 的 assets 文件夹里
     load_data()
 
 ft.app(target=main, assets_dir="assets")
