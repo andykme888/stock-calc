@@ -40,7 +40,7 @@ class StockCalculator:
             if t in self.transactions:
                 self.transactions.remove(t)
 
-    # 双轨制计算：既算摊薄成本，也算实时盈亏
+    # 双轨制计算
     def get_portfolio_summary(self):
         diluted_cost_pool = 0.0
         total_qty = 0
@@ -91,7 +91,7 @@ class StockCalculator:
 
         return total_qty, diluted_cost_pool, realized_pl_accumulator
 
-# === 2. Flet UI (UI美化版 - 修复显示问题) ===
+# === 2. Flet UI (UI美化版 - 紧凑型仪表盘) ===
 def main(page: ft.Page):
     # --- 页面设置 ---
     page.title = "做T助手 Pro"
@@ -148,7 +148,7 @@ def main(page: ft.Page):
             )
         )
 
-    # --- A. 仪表盘 (Dashboard) ---
+    # --- A. 仪表盘 (Dashboard - 紧凑版) ---
     txt_hold_qty = ft.Text("0", size=22, weight="w800", color="#2C3E50")
     txt_total_cost = ft.Text("0.00", size=22, weight="w800", color="#2C3E50")
     txt_total_pl = ft.Text("+0.00", size=22, weight="w800", color="#E74C3C")
@@ -157,7 +157,7 @@ def main(page: ft.Page):
         return ft.Column([
             ft.Text(f"{icon} {label}", size=11, color="#7F8C8D", weight="bold"),
             value_ctrl
-        ], alignment="center", horizontal_alignment="center", expand=1)
+        ], alignment="center", horizontal_alignment="center", expand=1, spacing=2) # 间距缩小为2
 
     dashboard = create_card(
         ft.Column([
@@ -166,11 +166,13 @@ def main(page: ft.Page):
                 ft.VerticalDivider(width=1, color="#ECF0F1"),
                 create_stat_col("成本(元)", txt_total_cost, "💰"),
             ]),
-            ft.Divider(height=20, color="#ECF0F1"), 
+            # 【核心修改】高度从20减少到8，大幅压缩垂直空间
+            ft.Divider(height=8, color="#ECF0F1"), 
             ft.Row([
                 create_stat_col("已实现盈亏(元)", txt_total_pl, "🧧"),
             ])
-        ], alignment="center")
+        ], alignment="center", spacing=5), # 行间距缩小为5
+        padding=12 # 内边距缩小为12
     )
 
     # --- B. 输入区 (Input) ---
@@ -307,7 +309,7 @@ def main(page: ft.Page):
             ft.DataColumn(ft.Text("🕹️操作", size=12, weight="bold", color="#34495E")),
             ft.DataColumn(ft.Text("💲均价", size=12, weight="bold", color="#34495E"), numeric=True),
             ft.DataColumn(ft.Text("#️⃣数量", size=12, weight="bold", color="#34495E"), numeric=True),
-            ft.DataColumn(ft.Text("📈分析", size=12, weight="bold", color="#34495E")), # 这里就是分析列
+            ft.DataColumn(ft.Text("📈分析", size=12, weight="bold", color="#34495E")), 
         ],
         rows=[],
     )
@@ -321,20 +323,17 @@ def main(page: ft.Page):
             ], alignment="spaceBetween"),
             ft.Divider(height=10, color="transparent"),
             
-            # 【关键修改】修复显示不全的问题
-            # 1. 外层 Column 允许垂直滚动 (scroll=ft.ScrollMode.AUTO)
-            # 2. 内层 Row 允许水平滚动 (scroll=ft.ScrollMode.ALWAYS)
             ft.Container(
                 content=ft.Column(
                     [
                         ft.Row(
                             [data_table], 
-                            scroll=ft.ScrollMode.ALWAYS # 允许左右滑动！
+                            scroll=ft.ScrollMode.ALWAYS 
                         )
                     ],
-                    scroll=ft.ScrollMode.AUTO, # 允许上下滑动
+                    scroll=ft.ScrollMode.AUTO, 
                 ),
-                height=300 # 限制高度
+                height=300 
             )
         ], spacing=0)
     )
@@ -461,8 +460,6 @@ def main(page: ft.Page):
         )
     )
 
-    # 指定 assets 目录，防止图标不显示
-    # 注意：确保你的 icon.png 已经在 GitHub 的 assets 文件夹里
     load_data()
 
 ft.app(target=main, assets_dir="assets")
