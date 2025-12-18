@@ -91,12 +91,17 @@ class StockCalculator:
 
         return total_qty, diluted_cost_pool, realized_pl_accumulator
 
-# === 2. Flet UI (UI美化版 - 紧凑型仪表盘) ===
+# === 2. Flet UI (UI美化版 - 适配全面屏) ===
 def main(page: ft.Page):
     # --- 页面设置 ---
     page.title = "做T助手 Pro"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 15 
+    
+    # 【关键修改】设置不对称的页边距
+    # top=60: 让顶部空出60像素，避开摄像头和时间栏
+    # left/right/bottom=15: 保持原有边距
+    page.padding = ft.padding.only(top=60, left=15, right=15, bottom=15)
+    
     page.bgcolor = "#F0F2F5" 
     page.scroll = ft.ScrollMode.HIDDEN 
     
@@ -157,7 +162,7 @@ def main(page: ft.Page):
         return ft.Column([
             ft.Text(f"{icon} {label}", size=11, color="#7F8C8D", weight="bold"),
             value_ctrl
-        ], alignment="center", horizontal_alignment="center", expand=1, spacing=2) # 间距缩小为2
+        ], alignment="center", horizontal_alignment="center", expand=1, spacing=2)
 
     dashboard = create_card(
         ft.Column([
@@ -166,13 +171,12 @@ def main(page: ft.Page):
                 ft.VerticalDivider(width=1, color="#ECF0F1"),
                 create_stat_col("成本(元)", txt_total_cost, "💰"),
             ]),
-            # 【核心修改】高度从20减少到8，大幅压缩垂直空间
             ft.Divider(height=8, color="#ECF0F1"), 
             ft.Row([
                 create_stat_col("已实现盈亏(元)", txt_total_pl, "🧧"),
             ])
-        ], alignment="center", spacing=5), # 行间距缩小为5
-        padding=12 # 内边距缩小为12
+        ], alignment="center", spacing=5), 
+        padding=12 
     )
 
     # --- B. 输入区 (Input) ---
@@ -276,7 +280,7 @@ def main(page: ft.Page):
         text_color="#2C3E50"
     )
 
-    # --- D. 交易表格 (Table - 修复滚动问题) ---
+    # --- D. 交易表格 (Table - 保持滚动修复) ---
     def on_delete_selected(e):
         if not selected_trades: return
         calc.delete_trades(selected_trades)
