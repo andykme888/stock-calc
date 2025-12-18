@@ -91,15 +91,13 @@ class StockCalculator:
 
         return total_qty, diluted_cost_pool, realized_pl_accumulator
 
-# === 2. Flet UI (UI美化版 - 适配全面屏) ===
+# === 2. Flet UI (UI美化版 - 去掉代码列) ===
 def main(page: ft.Page):
     # --- 页面设置 ---
     page.title = "做T助手 Pro"
     page.theme_mode = ft.ThemeMode.LIGHT
     
-    # 【关键修改】设置不对称的页边距
-    # top=60: 让顶部空出60像素，避开摄像头和时间栏
-    # left/right/bottom=15: 保持原有边距
+    # 保持顶部防遮挡间距
     page.padding = ft.padding.only(top=60, left=15, right=15, bottom=15)
     
     page.bgcolor = "#F0F2F5" 
@@ -280,7 +278,7 @@ def main(page: ft.Page):
         text_color="#2C3E50"
     )
 
-    # --- D. 交易表格 (Table - 保持滚动修复) ---
+    # --- D. 交易表格 (Table - 已去除代码列) ---
     def on_delete_selected(e):
         if not selected_trades: return
         calc.delete_trades(selected_trades)
@@ -308,7 +306,7 @@ def main(page: ft.Page):
         data_row_max_height=42,
         column_spacing=20,
         columns=[
-            ft.DataColumn(ft.Text("🔢代码", size=12, weight="bold", color="#34495E")),
+            # 【修改点】已删除“代码”列
             ft.DataColumn(ft.Text("🏷️名称", size=12, weight="bold", color="#34495E")),
             ft.DataColumn(ft.Text("🕹️操作", size=12, weight="bold", color="#34495E")),
             ft.DataColumn(ft.Text("💲均价", size=12, weight="bold", color="#34495E"), numeric=True),
@@ -378,7 +376,7 @@ def main(page: ft.Page):
                     on_select_changed=on_row_select,
                     data=t,
                     cells=[
-                        ft.DataCell(ft.Text(t['code'], size=12, font_family="monospace")),
+                        # 【修改点】数据填充也去掉了代码
                         ft.DataCell(ft.Text(t['name'], size=12)), 
                         ft.DataCell(
                             ft.Container(
